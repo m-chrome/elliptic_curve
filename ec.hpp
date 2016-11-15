@@ -2,6 +2,7 @@
 #define EC_HPP
 
 #include <gcrypt.h>
+#include <iostream>
 
 class EC
 {
@@ -11,14 +12,15 @@ private:
     gcry_mpi_t p;
     gcry_mpi_t a;
     gcry_mpi_t b;
-
-    // Прочие числа
-    gcry_mpi_point_t k;     // Случайное число 1<k<q
-    gcry_mpi_point_t q;     // Порядок циклической подгруппы точек ЭК
+    gcry_mpi_t q;
+    gcry_mpi_t k;     // Случайное число 1<k<q
 
     // Точка на кривой
     gcry_mpi_point_t P0;    // Точка P(x0,y0)
     gcry_mpi_point_t Q;     // Кратная точка Q(x,y)=k*P=P+..+P
+
+    // S-exp для кривой
+    gcry_sexp_t weierstrass;
 
 public:
     EC();
