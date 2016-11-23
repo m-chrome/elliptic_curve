@@ -7,6 +7,7 @@ using namespace std;
 int main()
 {
     EC test;
+    test.build_point();
     return 0;
 }
 

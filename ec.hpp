@@ -4,6 +4,14 @@
 #include <gcrypt.h>
 #include <iostream>
 
+struct
+{
+    const char *p = "57896044618658097711785492504343953926634992332820282019728792003956564821041";
+    const char *a = "7";
+    const char *b = "43308876546767276905765904595650931995942111794451039583252968842033849580414";
+    const char *q = "57896044618658097711785492504343953927082934583725450622380973592137631069619";
+} ec_param;
+
 class EC
 {
 private:
@@ -19,9 +27,6 @@ private:
     gcry_mpi_point_t P0;    // Точка P(x0,y0)
     gcry_mpi_point_t Q;     // Кратная точка Q(x,y)=k*P=P+..+P
 
-    // S-exp для кривой
-    gcry_sexp_t weierstrass;
-
 public:
     EC();
     ~EC();
@@ -36,5 +41,6 @@ public:
     bool check_correction();
 
 };
+
 
 #endif // EC_HPP
