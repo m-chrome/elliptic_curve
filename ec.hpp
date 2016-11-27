@@ -21,7 +21,7 @@ struct
 
 class EC
 {
-private:
+public:
 
     // Параметры эллиптической кривой
     gcry_mpi_t p;
@@ -34,13 +34,13 @@ private:
     gcry_mpi_point_t P0;    // Точка P(x0,y0)
     gcry_mpi_point_t Q;     // Кратная точка Q(x,y)=k*P=P+..+P
 
-public:
     EC();
     ~EC();
 
     // Функции
     void build_point();
-    void check_p_point();
+    bool check_point(gcry_mpi_point_t &point);
+    gcry_mpi_point_t double_point(gcry_mpi_point_t point);
     void generate_k_number();
     void compute_k_point();
     bool check_Q_belongs();

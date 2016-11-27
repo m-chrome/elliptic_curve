@@ -17,9 +17,9 @@ unsigned char* process_mpi(const char *raw_number, gcry_mpi_t &mpi)
     char str_number[MAX_MPI_BUF] = {0};
     strcpy(str_number, raw_number);
     mpi = gcry_mpi_new(MAX_MPI_BUF);
-    gcry_mpi_scan(&mpi, GCRYMPI_FMT_USG, str_number, sizeof(str_number), NULL);
+    gcry_mpi_scan(&mpi, GCRYMPI_FMT_STD, str_number, sizeof(str_number), NULL);
     unsigned char *check_buf = (unsigned char *)malloc(MAX_MPI_BUF);
-    if (gcry_mpi_print(GCRYMPI_FMT_USG, check_buf, MAX_MPI_BUF, NULL, mpi) == 0)
+    if (gcry_mpi_print(GCRYMPI_FMT_STD, check_buf, MAX_MPI_BUF, NULL, mpi) == 0)
     {
         free(check_buf);
         return check_buf;
@@ -35,8 +35,8 @@ void show_mpi(gcry_mpi_t mpi)
 {
     unsigned char *check_buf = (unsigned char *)malloc(MAX_MPI_BUF);
     memset(check_buf, '\0', MAX_MPI_BUF);
-    gcry_mpi_print(GCRYMPI_FMT_USG, check_buf, MAX_MPI_BUF, NULL, mpi);
-    printf("%s\n", check_buf);
+    gcry_mpi_print(GCRYMPI_FMT_STD, check_buf, MAX_MPI_BUF, NULL, mpi);
+    printf("Число: %s\n", check_buf);
 }
 
 EC::EC()
@@ -63,8 +63,7 @@ EC::~EC()
 {
     cout << "Очистка памяти." << endl;
 }
-
-void EC::check_p_point()
+bool EC::check_point(gcry_mpi_point_t &point)
 {
     // Проверка точки на принадлежность к кривой
     gcry_mpi_t x0, y0, A, B, C, exp, X, Y, div;
@@ -77,10 +76,10 @@ void EC::check_p_point()
     y0 = gcry_mpi_new(0);
     exp = gcry_mpi_new(0);
     div = gcry_mpi_new(0);
-    gcry_mpi_point_get(x0, y0, NULL, P0);
+    gcry_mpi_point_get(x0, y0, NULL, point);
 
     // X: x^3 + ax + b (p)
-    gcry_mpi_scan(&exp, GCRYMPI_FMT_USG, "3", 1, NULL);
+    gcry_mpi_set_ui(exp, 3);
     gcry_mpi_powm(A, x0, exp, p);
     gcry_mpi_mul(B, a, x0);
     gcry_mpi_add(C, B, b);
@@ -89,7 +88,7 @@ void EC::check_p_point()
 
     // Критерий Эйлера X^((p-1)/2) = 1 (p)
     gcry_mpi_sub_ui(exp, p, 1);
-    gcry_mpi_scan(&div, GCRYMPI_FMT_USG, "2", 1, NULL);
+    gcry_mpi_set_ui(div, 2);
     gcry_mpi_div(exp, NULL, exp, div, 0);
     gcry_mpi_powm(A, X, exp, p);
 
@@ -98,19 +97,47 @@ void EC::check_p_point()
 
     // Находим Y = X^((p+1)/4) (p)
     gcry_mpi_add_ui(exp, p, 1);
-    gcry_mpi_scan(&div, GCRYMPI_FMT_USG, "4", 1, NULL);
+    gcry_mpi_set_ui(div, 4);
     gcry_mpi_div(exp, NULL, exp, div, 0);
     gcry_mpi_powm(Y, X, exp, p);
-
-    if (gcry_mpi_cmp(y0,Y) == 0)
-        printf("Точка принадлежит кривой.\n");
-    else
-        printf("Точка не принадлежит кривой.\n");
 
     gcry_mpi_release(A);
     gcry_mpi_release(B);
     gcry_mpi_release(C);
     gcry_mpi_release(exp);
+    gcry_mpi_release(div);
+    gcry_mpi_release(X);
+    gcry_mpi_release(x0);
+
+    if (gcry_mpi_cmp(y0,Y) == 0)
+    {
+        gcry_mpi_release(Y);
+        gcry_mpi_release(y0);
+        return 1;
+    }
+    else
+    {
+        gcry_mpi_release(Y);
+        gcry_mpi_release(y0);
+        return 0;
+    }
+}
+
+gcry_mpi_point_t EC::double_point(gcry_mpi_point_t point)
+{
+    gcry_mpi_t x0, y0, divident, divisor, lambda;
+    x0 = gcry_mpi_new(0);
+    y0 = gcry_mpi_new(0);
+    divident = gcry_mpi_new(0);
+    divisor = gcry_mpi_new(0);
+    lambda = gcry_mpi_new(0);
+    gcry_mpi_point_get(x0, y0, NULL, P0);
+
+    gcry_mpi_mul(divident, x0, x0);
+    gcry_mpi_mul_ui(divident, divident, 3);
+    gcry_mpi_add(divident, divident, a);
+
+
 }
 
 /*void EC::build_point()

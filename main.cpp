@@ -7,7 +7,10 @@ using namespace std;
 int main()
 {
     EC test;
-    test.check_p_point();
+    if (test.check_point(test.P0))
+        printf("Точка Р принадлежит кривой.\n");
+    else
+        printf("Точка Р не принадлежит кривой.\n");
     return 0;
 }
 
