@@ -4,51 +4,72 @@
 #include <gcrypt.h>
 #include <iostream>
 
+// Набор параметров точки и кривой (HEX)
 struct
 {
-    const char *p = "115792089237316195423570985008687907853269984665640564039457584007913129639319";
-    const char *a = "87789765485885808793369751294406841171614589925193456909855962166505018127157";
-    const char *b = "18713751737015403763890503457318596560459867796169830279162511461744901002515";
-    const char *q = "28948022309329048855892746252171976963338560298092253442512153408785530358887";
-} ec_param;
-
-struct
-{
-    // Координаты в проективной форме
-    const char *x = "65987350182584560790308640619586834712105545126269759365406768962453298326056";
-    const char *y = "22855189202984962870421402504110399293152235382908105741749987405721320435292";
+    const char *x = "91E38443A5E82C0D880923425712B2BB658B9196932E02C78B2582FE742DAA28";
+    const char *y = "32879423AB1A0375895786C4BB46E9565FDE0B5344766740AF268ADB32322E5C";
 } point_param;
 
-class EC
+struct
+{
+    const char *p = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFD97";
+    const char *a = "C2173F1513981673AF4892C23035A27CE25E2013BF95AA33B22C656F277E7335";
+    const char *b = "295F9BAE7428ED9CCC20E7C359A9D41A22FCCD9108E17BF7BA9337A6F8AE9513";
+    const char *q = "400000000000000000000000000000000FD8CDDFC87B6635C115AF556C360C67";
+} ec_param;
+
+
+class Point
 {
 public:
+    gcry_mpi_t x;
+    gcry_mpi_t y;
+    gcry_mpi_t z;
 
-    // Параметры эллиптической кривой
+    Point();
+    ~Point();
+};
+
+// Вейерштрасс: y^2 = x^3 + ax + b (p)
+class EllipticCurve
+{
+public:
     gcry_mpi_t p;
     gcry_mpi_t a;
     gcry_mpi_t b;
     gcry_mpi_t q;
-    gcry_mpi_t k;     // Случайное число 1<k<q
+    gcry_mpi_t k;
 
-    // Точка на кривой
-    gcry_mpi_point_t P0;    // Точка P(x0,y0)
-    gcry_mpi_point_t Q;     // Кратная точка Q(x,y)=k*P=P+..+P
+    Point P;
+    Point Q;
 
-    EC();
-    ~EC();
+    EllipticCurve();
+    ~EllipticCurve();
 
-    // Функции
-    void build_point();
-    bool check_point(gcry_mpi_point_t &point);
-    gcry_mpi_point_t double_point(gcry_mpi_point_t point);
-    void generate_k_number();
-    void compute_k_point();
-    bool check_Q_belongs();
+    // Посчитать y^2 = f(x) (p)
+    gcry_mpi_t comp_fx0(gcry_mpi_t x0);
 
-    // Проверка корректности программы
-    bool check_correction();
+    // Критерий Эйлера на то, f(x) - квадратичный вычет в p или нет?
+    int euler_criteria(gcry_mpi_t fx0);
 
+    // Вычисление y = f(x)^((p+1)/4) (p) при условии, что p = 3 (4)
+    gcry_mpi_t comp_y0(gcry_mpi_t x0);
+
+    // Проверка принадлежности точки к кривой
+    int check_point_belongs(const Point &point);
+
+    // Построение точки на кривой
+    int build_point(int mode);
+
+    // Операция удвоения точки
+    Point doubling_point(const Point &point);
+
+    // Операция сложения двух точек
+    Point add_points(const Point &point1, const Point &point2);
+
+    // Вычисление кратной точки Q = k*P
+    void comp_mult_point(const Point &point);
 };
-
 
 #endif // EC_HPP

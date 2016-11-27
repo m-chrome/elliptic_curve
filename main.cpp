@@ -6,11 +6,8 @@ using namespace std;
 
 int main()
 {
-    EC test;
-    if (test.check_point(test.P0))
-        printf("Точка Р принадлежит кривой.\n");
-    else
-        printf("Точка Р не принадлежит кривой.\n");
+    EllipticCurve curve;
+    curve.build_point(0);
     return 0;
 }
 
