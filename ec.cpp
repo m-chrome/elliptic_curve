@@ -206,3 +206,34 @@ int EllipticCurve::build_point(int mode)
         return 1;
     }
 }
+
+Point EllipticCurve::doubling_point(const Point &point)
+{
+    Point DoubleP;
+    gcry_mpi_t lambda = gcry_mpi_new(0);
+    gcry_mpi_t div = gcry_mpi_new(0);
+    gcry_mpi_t exp = gcry_mpi_new(0);
+    gcry_mpi_set_ui(exp, 2);
+    gcry_mpi_powm(lambda, point.x, exp, p);
+    gcry_mpi_mul_ui(lambda, lambda, 3);
+    gcry_mpi_addm(lambda, lambda, a, p);
+    gcry_mpi_mul_ui(div, point.y, 2);
+    gcry_mpi_div(lambda, NULL, lambda, div, 0);
+
+    // Вычисление x координаты
+    gcry_mpi_powm(DoubleP.x, lambda, exp, p);
+    gcry_mpi_subm(DoubleP.x, DoubleP.x, point.x, p);
+    gcry_mpi_subm(DoubleP.x, DoubleP.x, point.x, p);
+
+    // Вычисление y координаты
+    gcry_mpi_subm(DoubleP.y, point.x, DoubleP.x, p);
+    gcry_mpi_mulm(DoubleP.y, DoubleP.y, lambda, p);
+    gcry_mpi_subm(DoubleP.y, DoubleP.y, DoubleP.x, p);
+
+    gcry_mpi_release(lambda);
+    gcry_mpi_release(div);
+    gcry_mpi_release(exp);
+
+    return DoubleP;
+}
+

@@ -62,10 +62,10 @@ public:
     // Построение точки на кривой
     int build_point(int mode);
 
-    // Операция удвоения точки
+    // Операция удвоения точки в аффинной форме
     Point doubling_point(const Point &point);
 
-    // Операция сложения двух точек
+    // Операция сложения двух точек в аффинной форме
     Point add_points(const Point &point1, const Point &point2);
 
     // Вычисление кратной точки Q = k*P
