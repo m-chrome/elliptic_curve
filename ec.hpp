@@ -72,4 +72,6 @@ public:
     void comp_mult_point(const Point &point);
 };
 
+void show_mpi(gcry_mpi_t mpi);
+
 #endif // EC_HPP

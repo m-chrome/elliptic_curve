@@ -72,6 +72,7 @@ EllipticCurve::EllipticCurve()
     gcry_mpi_mod(k, k, q);
     cout << "k = ";
     show_mpi(k);
+    cout << endl;
 }
 
 EllipticCurve::~EllipticCurve()
@@ -117,7 +118,7 @@ gcry_mpi_t EllipticCurve::comp_y0(gcry_mpi_t x0)
 {
     gcry_mpi_t fx0 = comp_fx0(x0);
     gcry_mpi_t y0 = gcry_mpi_new(0);
-    if (euler_criteria(fx0))
+    if (euler_criteria(fx0)==0)
     {
         cout << "f(x) - квадратичный вычет в р.\n";
         gcry_mpi_t exp = gcry_mpi_new(0);
@@ -157,7 +158,7 @@ int EllipticCurve::build_point(int mode)
     {
     case 0:
     {
-        cout << "\nБудут использованы ГОСТ параметры для точки.\n";
+        cout << "Будут использованы ГОСТ параметры для точки.\n";
         if (gcry_mpi_scan(&P.x, GCRYMPI_FMT_HEX, point_param.x, 0, NULL) != 0)
         {
             cout << "Ошибка записи координаты x.\n";
@@ -178,6 +179,13 @@ int EllipticCurve::build_point(int mode)
     case 1:
     {
         cout << "Будет сгенерирована случайная точка.\n";
+        gcry_mpi_randomize(P.x, gcry_mpi_get_nbits(p), GCRY_WEAK_RANDOM);
+        P.y = comp_y0(P.x);
+        cout << "x = ";
+        show_mpi(P.x);
+        cout << "y = ";
+        show_mpi(P.y);
+        cout << endl;
         break;
     }
     default:
@@ -194,6 +202,7 @@ int EllipticCurve::build_point(int mode)
         show_mpi(P.x);
         cout << "y = ";
         show_mpi(P.y);
+        cout << endl;
         return 0;
     }
     else
@@ -203,6 +212,7 @@ int EllipticCurve::build_point(int mode)
         show_mpi(P.x);
         cout << "y = ";
         show_mpi(P.y);
+        cout << endl;
         return 1;
     }
 }
@@ -226,9 +236,12 @@ Point EllipticCurve::doubling_point(const Point &point)
     gcry_mpi_subm(DoubleP.x, DoubleP.x, point.x, p);
 
     // Вычисление y координаты
-    gcry_mpi_subm(DoubleP.y, point.x, DoubleP.x, p);
-    gcry_mpi_mulm(DoubleP.y, DoubleP.y, lambda, p);
-    gcry_mpi_subm(DoubleP.y, DoubleP.y, DoubleP.x, p);
+    gcry_mpi_mul_ui(DoubleP.y, lambda, 3);
+    gcry_mpi_mulm(DoubleP.y, DoubleP.y, point.x, p);
+    gcry_mpi_set_ui(exp, 32);
+    gcry_mpi_powm(lambda, lambda, exp, p);
+    gcry_mpi_subm(DoubleP.y, DoubleP.y, lambda, p);
+    gcry_mpi_subm(DoubleP.y, DoubleP.y, point.y, p);
 
     gcry_mpi_release(lambda);
     gcry_mpi_release(div);
