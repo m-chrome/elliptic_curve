@@ -68,10 +68,10 @@ EllipticCurve::EllipticCurve()
 
     // Генерация случайного числа k
     k = gcry_mpi_new(0);
-    gcry_mpi_randomize(k, gcry_mpi_get_nbits(q), GCRY_WEAK_RANDOM);
+    /*gcry_mpi_randomize(k, gcry_mpi_get_nbits(q), GCRY_WEAK_RANDOM);
     gcry_mpi_mod(k, k, q);
     cout << "k = ";
-    show_mpi(k);
+    show_mpi(k);*/
     cout << endl;
 }
 
@@ -138,14 +138,18 @@ gcry_mpi_t EllipticCurve::comp_y0(gcry_mpi_t x0)
     return y0;
 }
 
-int EllipticCurve::check_point_belongs(const Point &point)
+int EllipticCurve::check_affine_point_belongs(const Point &point)
 {
     // Подстановка в уравнение кривой координат точки point и проверка на принадлежность
     gcry_mpi_t left = gcry_mpi_new(0);
     gcry_mpi_t exp = gcry_mpi_new(0);
     gcry_mpi_set_ui(exp, 2);
     gcry_mpi_powm(left, point.y, exp, p);
+    cout << "left: ";
+    show_mpi(left);
     gcry_mpi_t right = comp_fx0(point.x);
+    cout << "right: ";
+    show_mpi(right);
     int cmp = gcry_mpi_cmp(left, right);
     gcry_mpi_release(left);
     gcry_mpi_release(right);
@@ -173,6 +177,9 @@ int EllipticCurve::build_point(int mode)
         }
         cout << "y = ";
         show_mpi(P.y);
+        gcry_mpi_set_ui(P.z, 1);
+        cout << "z = ";
+        show_mpi(P.z);
         cout << endl;
         break;
     }
@@ -185,6 +192,9 @@ int EllipticCurve::build_point(int mode)
         show_mpi(P.x);
         cout << "y = ";
         show_mpi(P.y);
+        gcry_mpi_set_ui(P.z, 1);
+        cout << "z = ";
+        show_mpi(P.z);
         cout << endl;
         break;
     }
@@ -195,13 +205,15 @@ int EllipticCurve::build_point(int mode)
         break;
     }
     }
-    if (check_point_belongs(P) == 0)
+    if (check_affine_point_belongs(P) == 0)
     {
         cout << "Точка P(x,y) принадлежит кривой.\n";
         cout << "x = ";
         show_mpi(P.x);
         cout << "y = ";
         show_mpi(P.y);
+        cout << "z = ";
+        show_mpi(P.z);
         cout << endl;
         return 0;
     }
@@ -212,40 +224,62 @@ int EllipticCurve::build_point(int mode)
         show_mpi(P.x);
         cout << "y = ";
         show_mpi(P.y);
+        cout << "z = ";
+        show_mpi(P.z);
         cout << endl;
         return 1;
     }
 }
 
-Point EllipticCurve::doubling_point(const Point &point)
+int EllipticCurve::check_projective_point_belongs(const Point &point)
 {
-    Point DoubleP;
-    gcry_mpi_t lambda = gcry_mpi_new(0);
-    gcry_mpi_t div = gcry_mpi_new(0);
+    // point в проективных координатах
+    // Подстановка в уравнение
+    // Y^2*Z = X^3 + a*X*Z^3 + b*Z^3 (p)
+
+    // Левая часть
+    gcry_mpi_t left = gcry_mpi_new(0);
     gcry_mpi_t exp = gcry_mpi_new(0);
     gcry_mpi_set_ui(exp, 2);
-    gcry_mpi_powm(lambda, point.x, exp, p);
-    gcry_mpi_mul_ui(lambda, lambda, 3);
-    gcry_mpi_addm(lambda, lambda, a, p);
-    gcry_mpi_mul_ui(div, point.y, 2);
-    gcry_mpi_div(lambda, NULL, lambda, div, 0);
+    gcry_mpi_powm(left, point.y, exp, p);
+    gcry_mpi_mulm(left, left, point.z, p);
+    cout << "left: ";
+    show_mpi(left);
 
-    // Вычисление x координаты
-    gcry_mpi_powm(DoubleP.x, lambda, exp, p);
-    gcry_mpi_subm(DoubleP.x, DoubleP.x, point.x, p);
-    gcry_mpi_subm(DoubleP.x, DoubleP.x, point.x, p);
+    // Правая часть
+    gcry_mpi_t right = gcry_mpi_new(0);
+    gcry_mpi_t first = gcry_mpi_new(0);
+    gcry_mpi_t second = gcry_mpi_new(0);
+    gcry_mpi_t third = gcry_mpi_new(0);
+    gcry_mpi_powm(second, point.z, exp, p);
+    gcry_mpi_mulm(second, second, point.x, p);
+    gcry_mpi_mulm(second, second, a, p);
 
-    // Вычисление y координаты
-    gcry_mpi_mul_ui(DoubleP.y, lambda, 3);
-    gcry_mpi_mulm(DoubleP.y, DoubleP.y, point.x, p);
-    gcry_mpi_set_ui(exp, 32);
-    gcry_mpi_powm(lambda, lambda, exp, p);
-    gcry_mpi_subm(DoubleP.y, DoubleP.y, lambda, p);
-    gcry_mpi_subm(DoubleP.y, DoubleP.y, point.y, p);
+    gcry_mpi_set_ui(exp, 3);
+    gcry_mpi_powm(first, point.x, exp, p);
 
-    gcry_mpi_release(lambda);
-    gcry_mpi_release(div);
+    gcry_mpi_powm(third, point.z, exp, p);
+    gcry_mpi_mulm(third, third, b, p);
+    gcry_mpi_addm(right, first, second, p);
+    gcry_mpi_addm(right, right, third, p);
+
+    cout << "right: ";
+    show_mpi(right);
+    int cmp = gcry_mpi_cmp(left, right);
+    gcry_mpi_release(left);
+    gcry_mpi_release(right);
     gcry_mpi_release(exp);
+    gcry_mpi_release(first);
+    gcry_mpi_release(second);
+    gcry_mpi_release(third);
+    return cmp;
+}
+
+
+Point EllipticCurve::doubling_point(const Point &point)
+{
+    // Нужен переход к проективным координатам
+    Point DoubleP;
 
     return DoubleP;
 }

@@ -56,16 +56,19 @@ public:
     // Вычисление y = f(x)^((p+1)/4) (p) при условии, что p = 3 (4)
     gcry_mpi_t comp_y0(gcry_mpi_t x0);
 
-    // Проверка принадлежности точки к кривой
-    int check_point_belongs(const Point &point);
+    // Проверка принадлежности аффинной точки к кривой
+    int check_affine_point_belongs(const Point &point);
+
+    // Проверка принадлежности проективной точки к кривой
+    int check_projective_point_belongs(const Point &point);
 
     // Построение точки на кривой
     int build_point(int mode);
 
-    // Операция удвоения точки в аффинной форме
+    // Операция удвоения точки в проективных координатах
     Point doubling_point(const Point &point);
 
-    // Операция сложения двух точек в аффинной форме
+    // Операция сложения двух точек в проективных координатах
     Point add_points(const Point &point1, const Point &point2);
 
     // Вычисление кратной точки Q = k*P
