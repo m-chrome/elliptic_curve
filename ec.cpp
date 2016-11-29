@@ -145,11 +145,7 @@ int EllipticCurve::check_affine_point_belongs(const Point &point)
     gcry_mpi_t exp = gcry_mpi_new(0);
     gcry_mpi_set_ui(exp, 2);
     gcry_mpi_powm(left, point.y, exp, p);
-    cout << "left: ";
-    show_mpi(left);
     gcry_mpi_t right = comp_fx0(point.x);
-    cout << "right: ";
-    show_mpi(right);
     int cmp = gcry_mpi_cmp(left, right);
     gcry_mpi_release(left);
     gcry_mpi_release(right);
@@ -243,8 +239,6 @@ int EllipticCurve::check_projective_point_belongs(const Point &point)
     gcry_mpi_set_ui(exp, 2);
     gcry_mpi_powm(left, point.y, exp, p);
     gcry_mpi_mulm(left, left, point.z, p);
-    cout << "left: ";
-    show_mpi(left);
 
     // Правая часть
     gcry_mpi_t right = gcry_mpi_new(0);
@@ -263,8 +257,6 @@ int EllipticCurve::check_projective_point_belongs(const Point &point)
     gcry_mpi_addm(right, first, second, p);
     gcry_mpi_addm(right, right, third, p);
 
-    cout << "right: ";
-    show_mpi(right);
     int cmp = gcry_mpi_cmp(left, right);
     gcry_mpi_release(left);
     gcry_mpi_release(right);
@@ -278,9 +270,45 @@ int EllipticCurve::check_projective_point_belongs(const Point &point)
 
 Point EllipticCurve::doubling_point(const Point &point)
 {
-    // Нужен переход к проективным координатам
     Point DoubleP;
-
+    gcry_mpi_t t[11];
+    for(int i = 0; i < 11; ++i)
+        t[i] = gcry_mpi_new(0);
+    gcry_mpi_t xx = gcry_mpi_new(0);
+    gcry_mpi_t B = gcry_mpi_new(0);
+    gcry_mpi_t zz = gcry_mpi_new(0);
+    gcry_mpi_t w = gcry_mpi_new(0);
+    gcry_mpi_t r = gcry_mpi_new(0);
+    gcry_mpi_t rr = gcry_mpi_new(0);
+    gcry_mpi_t h = gcry_mpi_new(0);
+    gcry_mpi_t s = gcry_mpi_new(0);
+    gcry_mpi_t sss = gcry_mpi_new(0);
+    gcry_mpi_t exp = gcry_mpi_new(0);
+    gcry_mpi_set_ui(exp, 2);
+    gcry_mpi_powm(xx, point.x, exp, p);
+    gcry_mpi_powm(zz, point.z, exp, p);
+    gcry_mpi_mul_ui(t[0], xx, 3);
+    gcry_mpi_mulm(t[1], a, zz, p);
+    gcry_mpi_addm(w, t[0], t[1], p);
+    gcry_mpi_mulm(t[2], point.z, point.y, p);
+    gcry_mpi_mul_ui(s, t[2], 2);
+    gcry_mpi_set_ui(exp, 3);
+    gcry_mpi_powm(sss, s, exp, p);
+    gcry_mpi_mulm(r, point.y, s, p);
+    gcry_mpi_mulm(rr, r, r, p);
+    gcry_mpi_addm(t[3], r, point.x, p);
+    gcry_mpi_mulm(t[4], t[3], t[3], p);
+    gcry_mpi_subm(t[5], t[4], xx, p);
+    gcry_mpi_subm(B, t[5], rr, p);
+    gcry_mpi_mulm(t[6], w, w, p);
+    gcry_mpi_mul_ui(t[7], B, 2);
+    gcry_mpi_subm(h, t[6], t[7], p);
+    gcry_mpi_mulm(DoubleP.x, h, s, p);
+    gcry_mpi_subm(t[8], B, h, p);
+    gcry_mpi_mul_ui(t[9], rr, 2);
+    gcry_mpi_mulm(t[10], t[8], w, p);
+    gcry_mpi_subm(DoubleP.y, t[10], t[9], p);
+    gcry_mpi_set(DoubleP.z, sss);
     return DoubleP;
 }
 
