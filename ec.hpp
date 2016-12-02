@@ -43,6 +43,7 @@ public:
     gcry_mpi_t b;
     gcry_mpi_t q;
     gcry_mpi_t k;
+    gcry_mpi_t l;
 
     Point P;
     Point Q;
@@ -69,13 +70,16 @@ public:
     int build_point(int mode);
 
     // Операция удвоения точки в проективных координатах
-    Point doubling_point(const Point &point);
+    void doubling_point(Point &dupPoint, const Point &point);
 
     // Операция сложения двух точек в проективных координатах
-    Point add_points(const Point &p1, const Point &p2);
+    void add_points(Point &p3, const Point &p1, const Point &p2);
 
     // Вычисление кратной точки Q = k*P
-    Point comp_mult_point(const Point &point);
+    void comp_mult_point(Point &k_point, const Point &point, const gcry_mpi_t m);
+
+    // Проверка правильности работы программы
+    bool extra_check();
 };
 
 void show_mpi(gcry_mpi_t mpi);

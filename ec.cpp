@@ -86,9 +86,16 @@ EllipticCurve::EllipticCurve()
     // Генерация случайного числа k
     k = gcry_mpi_new(0);
     /*gcry_mpi_randomize(k, gcry_mpi_get_nbits(q), GCRY_WEAK_RANDOM);
-    gcry_mpi_mod(k, k, q);
+    gcry_mpi_mod(k, k, q);*/
+    gcry_mpi_set_ui(k, 16);
     cout << "k = ";
-    show_mpi(k);*/
+    show_mpi(k);
+
+    // Генерация l
+    l = gcry_mpi_new(0);
+    gcry_mpi_set_ui(l, 20);
+    cout << "l = ";
+    show_mpi(l);
     cout << endl;
 }
 
@@ -188,16 +195,16 @@ int EllipticCurve::build_point(int mode)
         gcry_mpi_set_ui(P.z, 1);
         P.print();
         cout << endl;
-        //break;
+        break;
     }
     case 1:
     {
         cout << "Будет сгенерирована случайная точка.\n";
-        //gcry_mpi_randomize(Q.x, 254, GCRY_WEAK_RANDOM);
-        gcry_mpi_scan(&Q.x, GCRYMPI_FMT_HEX, test.x, 0, NULL);
-        Q.y = comp_y0(Q.x);
-        gcry_mpi_set_ui(Q.z, 1);
-        Q.print();
+        gcry_mpi_randomize(P.x, 254, GCRY_WEAK_RANDOM);
+        //gcry_mpi_scan(&Q.x, GCRYMPI_FMT_HEX, test.x, 0, NULL);
+        P.y = comp_y0(P.x);
+        gcry_mpi_set_ui(P.z, 1);
+        P.print();
         cout << endl;
         break;
     }
@@ -208,17 +215,15 @@ int EllipticCurve::build_point(int mode)
         break;
     }
     }
-    if (check_projective_point_belongs(P) == 0 && check_projective_point_belongs(Q)==0)
+    if (check_projective_point_belongs(P) == 0)
     {
         cout << "Точка P(x,y) принадлежит кривой.\n";
-        cout << "Точка Q(x,y) принадлежит кривой.\n";
         cout << endl;
         return 0;
     }
     else
     {
         cout << "Точка P(x,y) не принадлежит кривой.\n";
-        cout << "Точка Q(x,y) не принадлежит кривой.\n";
         cout << endl;
         return 1;
     }
@@ -264,9 +269,8 @@ int EllipticCurve::check_projective_point_belongs(const Point &point)
     return cmp;
 }
 
-Point EllipticCurve::doubling_point(const Point &point)
+void EllipticCurve::doubling_point(Point &dupPoint, const Point &point)
 {
-    Point DoubleP;
     gcry_mpi_t t[11];
     for(int i = 0; i < 11; ++i)
         t[i] = gcry_mpi_new(0);
@@ -299,22 +303,16 @@ Point EllipticCurve::doubling_point(const Point &point)
     gcry_mpi_mulm(t[6], w, w, p);
     gcry_mpi_mul_ui(t[7], B, 2);
     gcry_mpi_subm(h, t[6], t[7], p);
-    gcry_mpi_mulm(DoubleP.x, h, s, p);
+    gcry_mpi_mulm(dupPoint.x, h, s, p);
     gcry_mpi_subm(t[8], B, h, p);
     gcry_mpi_mul_ui(t[9], rr, 2);
     gcry_mpi_mulm(t[10], t[8], w, p);
-    gcry_mpi_subm(DoubleP.y, t[10], t[9], p);
-    gcry_mpi_set(DoubleP.z, sss);
-
-    cout << "Double P:\n";
-    DoubleP.print();
-    return DoubleP;
+    gcry_mpi_subm(dupPoint.y, t[10], t[9], p);
+    gcry_mpi_set(dupPoint.z, sss);
 }
 
-Point EllipticCurve::add_points(const Point &p1, const Point &p2)
+void EllipticCurve::add_points(Point &p3, const Point &p1, const Point &p2)
 {
-    Point p3;
-
     // http://hyperelliptic.org/EFD/g1p/auto-code/shortw/projective/addition/add-1998-cmo-2.op3
     gcry_mpi_t t[8];
     for(int i = 0; i < 8; ++i)
@@ -377,16 +375,42 @@ Point EllipticCurve::add_points(const Point &p1, const Point &p2)
     gcry_mpi_release(vvv);
     gcry_mpi_release(R);
     gcry_mpi_release(A);
-
-    cout << "P+Q:\n";
-    p3.print();
-    return p3;
 }
 
-Point EllipticCurve::comp_mult_point(const Point &point)
+void EllipticCurve::comp_mult_point(Point &k_point, const Point &point, const gcry_mpi_t m)
 {
-    gcry_mpi_set_ui(Q.x, 0);
-    gcry_mpi_set_ui(Q.y, 1);
-    gcry_mpi_set_ui(Q.z, 0);
+    Point temp, temp1;
+    temp.x = gcry_mpi_copy(point.x);
+    temp.y = gcry_mpi_copy(point.y);
+    temp.z = gcry_mpi_copy(point.z);
+
+    gcry_mpi_set_ui(k_point.x, 0);
+    gcry_mpi_set_ui(k_point.y, 1);
+    gcry_mpi_set_ui(k_point.z, 1);
+
+    for(int i = (int)gcry_mpi_get_nbits(m)-1; i > -1;--i)
+    {
+        doubling_point(k_point, k_point);
+        if (gcry_mpi_test_bit(m, i))
+            add_points(k_point, k_point, temp);
+    }
 }
 
+bool EllipticCurve::extra_check()
+{
+    Point Q, Q1, Q2;
+    comp_mult_point(Q1, P, k);
+    comp_mult_point(Q2, P, l);
+    add_points(Q, Q1, Q2);
+
+    Point R;
+    gcry_mpi_t m = gcry_mpi_new(0);
+    gcry_mpi_addm(m, k, l, p);
+    comp_mult_point(R, P, m);
+    gcry_mpi_release(m);
+
+    if (Q.x == R.x && Q.y == R.y && Q.z == R.z)
+        return true;
+    else
+        return false;
+}
