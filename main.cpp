@@ -7,24 +7,22 @@
 
 using namespace std;
 
+struct
+{
+    const char *x = "34F0AC4BDA94D3767280F1C0613B67AA55DEBA50CF8389D31747497FE3E65EA6";
+    const char *y = "6BD97C34CDEA128F611A66D6CB7257A7174624EEF8B541587D17F83B0697299F";
+    const char *z = "01";
+} test;
+
 int main()
 {
     EllipticCurve curve;
     curve.build_point(MODE_GOST);
 
-    Point Q1, Q2;
-
-    gcry_mpi_set_ui(Q1.x, 0);
-    gcry_mpi_set_ui(Q1.y, 1);
-    gcry_mpi_set_ui(Q1.z, 1);
-
-    curve.doubling_point(Q1, Q1);
-
-    Q1.print();
-
     cout << "Тестирование операции удвоения:\n";
     Point DP;
     curve.doubling_point(DP, curve.P);
+    DP.print();
     if (curve.check_projective_point_belongs(DP) == 0)
     {
         cout << "Удвоенная точка принадлежит кривой.\n";
@@ -34,13 +32,13 @@ int main()
         cout << "Удвоенная точка не принадлежит кривой.\n";
         return 1;
     }
-    DP.print();
     cout << endl;
 
     cout << "Тестирование операции сложения точек:\n";
     Point SumP;
     curve.add_points(SumP, curve.P, DP);
-    if (curve.check_projective_point_belongs(DP) == 0)
+    SumP.print();
+    if (curve.check_projective_point_belongs(SumP) == 0)
     {
         cout << "Полученная точка принадлежит кривой.\n";
     }
@@ -49,35 +47,21 @@ int main()
         cout << "Полученная точка не принадлежит кривой.\n";
         return 1;
     }
-    SumP.print();
     cout << endl;
 
-    cout << "Тестирование операции нахождения кратной точки 1:\n";
+    cout << "Тестирование операции нахождения кратной точки:\n";
     Point KP1;
     curve.comp_mult_point(KP1, curve.P, curve.k);
-    if (curve.check_projective_point_belongs(DP) == 0)
-    {
-        cout << "Кратная точка принадлежит кривой.\n";
-    }
-    else
-    {
-        cout << "Кратная точка не принадлежит кривой.\n";
-    }
     KP1.print();
-    cout << endl;
-
-    cout << "Тестирование операции нахождения кратной точки 2:\n";
-    Point KP2;
-    curve.comp_mult_point(KP2, curve.P, curve.l);
-    if (curve.check_projective_point_belongs(DP) == 0)
+    if (curve.check_projective_point_belongs(KP1) == 0)
     {
         cout << "Кратная точка принадлежит кривой.\n";
     }
     else
     {
         cout << "Кратная точка не принадлежит кривой.\n";
+        return 1;
     }
-    KP2.print();
     cout << endl;
 
     cout << "Extra проверка правильности всего происходящего: ";

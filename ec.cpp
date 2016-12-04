@@ -385,8 +385,8 @@ void EllipticCurve::comp_mult_point(Point &k_point, const Point &point, const gc
     temp.z = gcry_mpi_copy(point.z);
 
     gcry_mpi_set_ui(k_point.x, 0);
-    gcry_mpi_set_ui(k_point.y, 1);
-    gcry_mpi_set_ui(k_point.z, 1);
+    gcry_mpi_set_ui(k_point.y, 0);
+    gcry_mpi_set_ui(k_point.z, 0);
 
     for(int i = (int)gcry_mpi_get_nbits(m)-1; i > -1;--i)
     {
