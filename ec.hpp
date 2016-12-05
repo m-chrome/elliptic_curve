@@ -76,7 +76,7 @@ public:
     void add_points(Point &p3, const Point &p1, const Point &p2);
 
     // Вычисление кратной точки Q = k*P
-    void comp_mult_point(Point &k_point, const Point &point, const gcry_mpi_t m);
+    void comp_mult_point(Point &kp, const Point &p, const gcry_mpi_t m);
 
     // Проверка правильности работы программы
     bool extra_check();

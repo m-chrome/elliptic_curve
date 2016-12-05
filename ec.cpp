@@ -87,16 +87,17 @@ EllipticCurve::EllipticCurve()
     k = gcry_mpi_new(0);
     /*gcry_mpi_randomize(k, gcry_mpi_get_nbits(q), GCRY_WEAK_RANDOM);
     gcry_mpi_mod(k, k, q);*/
-    gcry_mpi_set_ui(k, 16);
+    gcry_mpi_set_ui(k, 3);
     cout << "k = ";
     show_mpi(k);
 
     // Генерация l
     l = gcry_mpi_new(0);
-    gcry_mpi_set_ui(l, 20);
+    gcry_mpi_set_ui(l, 4);
     cout << "l = ";
     show_mpi(l);
     cout << endl;
+
 }
 
 EllipticCurve::~EllipticCurve()
@@ -377,22 +378,36 @@ void EllipticCurve::add_points(Point &p3, const Point &p1, const Point &p2)
     gcry_mpi_release(A);
 }
 
-void EllipticCurve::comp_mult_point(Point &k_point, const Point &point, const gcry_mpi_t m)
+void EllipticCurve::comp_mult_point(Point &kp, const Point &p, const gcry_mpi_t m)
 {
-    Point temp, temp1;
-    temp.x = gcry_mpi_copy(point.x);
-    temp.y = gcry_mpi_copy(point.y);
-    temp.z = gcry_mpi_copy(point.z);
+    gcry_mpi_set_ui(kp.x, 0);
+    gcry_mpi_set_ui(kp.y, 0);
+    gcry_mpi_set_ui(kp.z, 0);
 
-    gcry_mpi_set_ui(k_point.x, 0);
-    gcry_mpi_set_ui(k_point.y, 0);
-    gcry_mpi_set_ui(k_point.z, 0);
+    Point tempP;
+    gcry_mpi_set(tempP.x, p.x);
+    gcry_mpi_set(tempP.y, p.y);
+    gcry_mpi_set(tempP.z, p.z);
 
-    for(int i = (int)gcry_mpi_get_nbits(m)-1; i > -1;--i)
+    int last = 0;
+    for(int i = 0; i < (int)gcry_mpi_get_nbits(m); i++)
     {
-        doubling_point(k_point, k_point);
         if (gcry_mpi_test_bit(m, i))
-            add_points(k_point, k_point, temp);
+        {
+            for(int j = last; j<i; ++j)
+            {
+                doubling_point(tempP, tempP);
+            }
+            last = i;
+            if (!(gcry_mpi_cmp_ui(kp.x, 0) && gcry_mpi_cmp_ui(kp.y, 0) && gcry_mpi_cmp_ui(kp.z, 0)))
+            {
+                kp.x = gcry_mpi_copy(tempP.x);
+                kp.y = gcry_mpi_copy(tempP.y);
+                kp.z = gcry_mpi_copy(tempP.z);
+            }
+            else
+                add_points(kp, kp, tempP);
+        }
     }
 }
 
@@ -409,7 +424,7 @@ bool EllipticCurve::extra_check()
     comp_mult_point(R, P, m);
     gcry_mpi_release(m);
 
-    if (Q.x == R.x && Q.y == R.y && Q.z == R.z)
+    if (!(gcry_mpi_cmp(Q.x, R.x) && gcry_mpi_cmp(Q.y, R.y) && gcry_mpi_cmp(Q.z, R.z)))
         return true;
     else
         return false;
