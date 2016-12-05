@@ -44,6 +44,7 @@ public:
     gcry_mpi_t q;
     gcry_mpi_t k;
     gcry_mpi_t l;
+    gcry_mpi_t m;
 
     Point P;
     Point Q;

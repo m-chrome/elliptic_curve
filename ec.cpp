@@ -10,13 +10,6 @@
 
 using namespace std;
 
-struct
-{
-    //const char *x = "38461FA70F752EA90E080EEDDFA7ECF64C97CA72AB56851012BBC3956CFF3C4A";
-    const char *x = "34f0ac4bda94d3767280f1c0613b67aa55deba50cf8389d31747497fe3e65ea6";
-    const char *y = "B214F2F87D1CEFD8DCF842514D13A499A9D640D4AA5FB150FB3BF4B84010FA92";
-} test;
-
 // -----------------------------------------------------
 // Общие методы
 void show_mpi(gcry_mpi_t mpi)
@@ -83,21 +76,26 @@ EllipticCurve::EllipticCurve()
     cout << "q = ";
     show_mpi(q);
 
-    // Генерация случайного числа k
+    // Генерация k
     k = gcry_mpi_new(0);
-    /*gcry_mpi_randomize(k, gcry_mpi_get_nbits(q), GCRY_WEAK_RANDOM);
-    gcry_mpi_mod(k, k, q);*/
-    gcry_mpi_set_ui(k, 3);
+    if (gcry_mpi_scan(&k, GCRYMPI_FMT_HEX, "3", 0, NULL) != 0)
+        cout << "Ошибка записи k.\n";
     cout << "k = ";
     show_mpi(k);
 
     // Генерация l
     l = gcry_mpi_new(0);
-    gcry_mpi_set_ui(l, 4);
+    if (gcry_mpi_scan(&l, GCRYMPI_FMT_HEX, "4", 0, NULL) != 0)
+        cout << "Ошибка записи l.\n";
     cout << "l = ";
     show_mpi(l);
-    cout << endl;
 
+    // Генерация m
+    m = gcry_mpi_new(0);
+    gcry_mpi_addm(m, k, l, q);
+    cout << "m = ";
+    show_mpi(m);
+    cout << endl;
 }
 
 EllipticCurve::~EllipticCurve()
@@ -142,23 +140,14 @@ gcry_mpi_t EllipticCurve::comp_y0(gcry_mpi_t x0)
 {
     gcry_mpi_t fx0 = comp_fx0(x0);
     gcry_mpi_t y0 = gcry_mpi_new(0);
-    if (euler_criteria(fx0)==0)
-    {
-        cout << "f(x) - квадратичный вычет в р.\n";
-        gcry_mpi_t exp = gcry_mpi_new(0);
-        gcry_mpi_t div = gcry_mpi_new(0);
-        gcry_mpi_add_ui(exp, p, 1);
-        gcry_mpi_set_ui(div, 4);
-        gcry_mpi_div(exp, NULL, exp, div, 0);
-        gcry_mpi_powm(y0, fx0, exp, p);
-        gcry_mpi_release(exp);
-        gcry_mpi_release(div);
-    }
-    else
-    {
-        cout << "f(x) - не квадратичный вычет в р.\n";
-        gcry_mpi_set_ui(y0, 0);
-    }
+    gcry_mpi_t exp = gcry_mpi_new(0);
+    gcry_mpi_t div = gcry_mpi_new(0);
+    gcry_mpi_add_ui(exp, p, 1);
+    gcry_mpi_set_ui(div, 4);
+    gcry_mpi_div(exp, NULL, exp, div, 0);
+    gcry_mpi_powm(y0, fx0, exp, p);
+    gcry_mpi_release(exp);
+    gcry_mpi_release(div);
     return y0;
 }
 
@@ -200,9 +189,10 @@ int EllipticCurve::build_point(int mode)
     }
     case 1:
     {
-        cout << "Будет сгенерирована случайная точка.\n";
+        cout << "Будет сгенерирована случайная точка P(x,y,z).\n";
         gcry_mpi_randomize(P.x, 254, GCRY_WEAK_RANDOM);
-        //gcry_mpi_scan(&Q.x, GCRYMPI_FMT_HEX, test.x, 0, NULL);
+        while (euler_criteria(comp_fx0(P.x))!=0)
+            gcry_mpi_randomize(P.x, 254, GCRY_WEAK_RANDOM);
         P.y = comp_y0(P.x);
         gcry_mpi_set_ui(P.z, 1);
         P.print();
@@ -218,13 +208,13 @@ int EllipticCurve::build_point(int mode)
     }
     if (check_projective_point_belongs(P) == 0)
     {
-        cout << "Точка P(x,y) принадлежит кривой.\n";
+        cout << "Точка P(x,y,z) принадлежит кривой.\n";
         cout << endl;
         return 0;
     }
     else
     {
-        cout << "Точка P(x,y) не принадлежит кривой.\n";
+        cout << "Точка P(x,y,z) не принадлежит кривой.\n";
         cout << endl;
         return 1;
     }
@@ -416,12 +406,20 @@ bool EllipticCurve::extra_check()
     Point Q, Q1, Q2;
     comp_mult_point(Q1, P, k);
     comp_mult_point(Q2, P, l);
+
+    /*cout << "Q1:\n";
+    Q1.print();
+    cout << "Q2:\n";
+    Q2.print();*/
+
     add_points(Q, Q1, Q2);
+    /*cout << "Q:\n";
+    Q.print();*/
 
     Point R;
-    gcry_mpi_t m = gcry_mpi_new(0);
-    gcry_mpi_addm(m, k, l, p);
     comp_mult_point(R, P, m);
+    /*cout << "R:\n";
+    R.print();*/
     gcry_mpi_release(m);
 
     if (!(gcry_mpi_cmp(Q.x, R.x) && gcry_mpi_cmp(Q.y, R.y) && gcry_mpi_cmp(Q.z, R.z)))
