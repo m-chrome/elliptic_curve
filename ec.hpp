@@ -78,9 +78,6 @@ public:
 
     // Вычисление кратной точки Q = k*P
     void comp_mult_point(Point &kp, const Point &p, const gcry_mpi_t m);
-
-    // Проверка правильности работы программы
-    bool extra_check();
 };
 
 void show_mpi(gcry_mpi_t mpi);

@@ -7,22 +7,10 @@
 
 using namespace std;
 
-struct
-{
-    const char *x = "34F0AC4BDA94D3767280F1C0613B67AA55DEBA50CF8389D31747497FE3E65EA6";
-    const char *y = "6BD97C34CDEA128F611A66D6CB7257A7174624EEF8B541587D17F83B0697299F";
-    const char *z = "01";
-} test;
-
 int main()
 {
     EllipticCurve curve;
     curve.build_point(MODE_GOST);
-
-    Point O;
-    gcry_mpi_set_ui(O.x, 0);
-    gcry_mpi_set_ui(O.y, 1);
-    gcry_mpi_set_ui(O.z, 0);
 
     cout << "Тестирование операции удвоения:\n";
     Point DP;
@@ -86,7 +74,7 @@ int main()
 
     cout << "Тестирование операции нахождения кратной точки 3:\n";
     Point KP3;
-    curve.comp_mult_point(KP3, curve.P, curve.m);
+    curve.comp_mult_point(KP3, curve.P, curve.q);
     KP3.print();
     if (curve.check_projective_point_belongs(KP3) == 0)
     {
@@ -98,12 +86,6 @@ int main()
         return 1;
     }
     cout << endl;
-
-    cout << "Extra проверка правильности всего происходящего: ";
-    if (curve.extra_check())
-        cout << "[OK]\n";
-    else
-        cout << "[NOT OK]\n";
     return 0;
 }
 

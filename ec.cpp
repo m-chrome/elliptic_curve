@@ -78,14 +78,14 @@ EllipticCurve::EllipticCurve()
 
     // Генерация k
     k = gcry_mpi_new(0);
-    if (gcry_mpi_scan(&k, GCRYMPI_FMT_HEX, "3", 0, NULL) != 0)
+    if (gcry_mpi_scan(&k, GCRYMPI_FMT_HEX, "36464632313122431000001010101010101010101010101", 0, NULL) != 0)
         cout << "Ошибка записи k.\n";
     cout << "k = ";
     show_mpi(k);
 
     // Генерация l
     l = gcry_mpi_new(0);
-    if (gcry_mpi_scan(&l, GCRYMPI_FMT_HEX, "4", 0, NULL) != 0)
+    if (gcry_mpi_scan(&l, GCRYMPI_FMT_HEX, "4aaaabacadaeafacdd121315554321", 0, NULL) != 0)
         cout << "Ошибка записи l.\n";
     cout << "l = ";
     show_mpi(l);
@@ -191,8 +191,13 @@ int EllipticCurve::build_point(int mode)
     {
         cout << "Будет сгенерирована случайная точка P(x,y,z).\n";
         gcry_mpi_randomize(P.x, 254, GCRY_WEAK_RANDOM);
+        cout << "Проверка критерием Эйлера.\n";
         while (euler_criteria(comp_fx0(P.x))!=0)
+        {
+            cout << "Критерий Эйлера не сработал." << endl;
+            cout << "Повторная генерация." << endl;
             gcry_mpi_randomize(P.x, 254, GCRY_WEAK_RANDOM);
+        }
         P.y = comp_y0(P.x);
         gcry_mpi_set_ui(P.z, 1);
         P.print();
@@ -300,6 +305,8 @@ void EllipticCurve::doubling_point(Point &dupPoint, const Point &point)
     gcry_mpi_mulm(t[10], t[8], w, p);
     gcry_mpi_subm(dupPoint.y, t[10], t[9], p);
     gcry_mpi_set(dupPoint.z, sss);
+    for(int i = 0; i < 11; ++i)
+        gcry_mpi_release(t[i]);
 }
 
 void EllipticCurve::add_points(Point &p3, const Point &p1, const Point &p2)
@@ -371,7 +378,7 @@ void EllipticCurve::add_points(Point &p3, const Point &p1, const Point &p2)
 void EllipticCurve::comp_mult_point(Point &kp, const Point &p, const gcry_mpi_t m)
 {
     gcry_mpi_set_ui(kp.x, 0);
-    gcry_mpi_set_ui(kp.y, 0);
+    gcry_mpi_set_ui(kp.y, 1);
     gcry_mpi_set_ui(kp.z, 0);
 
     Point tempP;
@@ -379,6 +386,7 @@ void EllipticCurve::comp_mult_point(Point &kp, const Point &p, const gcry_mpi_t 
     gcry_mpi_set(tempP.y, p.y);
     gcry_mpi_set(tempP.z, p.z);
 
+    // 13P = 8P + 4P + P = (2^3)P + (2^2)P + (2^0)P
     int last = 0;
     for(int i = 0; i < (int)gcry_mpi_get_nbits(m); i++)
     {
@@ -389,7 +397,7 @@ void EllipticCurve::comp_mult_point(Point &kp, const Point &p, const gcry_mpi_t 
                 doubling_point(tempP, tempP);
             }
             last = i;
-            if (!(gcry_mpi_cmp_ui(kp.x, 0) && gcry_mpi_cmp_ui(kp.y, 0) && gcry_mpi_cmp_ui(kp.z, 0)))
+            if (!(gcry_mpi_cmp_ui(kp.x, 0) && gcry_mpi_cmp_ui(kp.y, 1) && gcry_mpi_cmp_ui(kp.z, 0)))
             {
                 kp.x = gcry_mpi_copy(tempP.x);
                 kp.y = gcry_mpi_copy(tempP.y);
@@ -399,31 +407,4 @@ void EllipticCurve::comp_mult_point(Point &kp, const Point &p, const gcry_mpi_t 
                 add_points(kp, kp, tempP);
         }
     }
-}
-
-bool EllipticCurve::extra_check()
-{
-    Point Q, Q1, Q2;
-    comp_mult_point(Q1, P, k);
-    comp_mult_point(Q2, P, l);
-
-    /*cout << "Q1:\n";
-    Q1.print();
-    cout << "Q2:\n";
-    Q2.print();*/
-
-    add_points(Q, Q1, Q2);
-    /*cout << "Q:\n";
-    Q.print();*/
-
-    Point R;
-    comp_mult_point(R, P, m);
-    /*cout << "R:\n";
-    R.print();*/
-    gcry_mpi_release(m);
-
-    if (!(gcry_mpi_cmp(Q.x, R.x) && gcry_mpi_cmp(Q.y, R.y) && gcry_mpi_cmp(Q.z, R.z)))
-        return true;
-    else
-        return false;
 }
